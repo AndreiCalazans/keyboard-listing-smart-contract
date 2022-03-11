@@ -1,11 +1,13 @@
 import { useState, useEffect } from "react";
 import { UserCircleIcon } from "@heroicons/react/solid";
+import { toast } from "react-hot-toast";
+import { ethers } from "ethers";
 
 import PrimaryButton from "../components/primary-button";
 import Keyboard from "../components/keyboard";
 import { addressesEqual } from "../utils/addressesEqual";
 import TipButton from "../components/tip-button";
-import getKeyboardsContract from "../utils/getKeyboardsContract"
+import getKeyboardsContract from "../utils/getKeyboardsContract";
 
 export default function Home() {
   const [ethereum, setEthereum] = useState(undefined);
@@ -80,6 +82,33 @@ export default function Home() {
     setNewKeyboard("");
     await getKeyboards();
   };
+
+  const addContractEventHandlers = () => {
+    if (keyboardsContract && connectedAccount) {
+      keyboardsContract.on("KeyboardCreated", async (keyboard) => {
+        if (
+          connectedAccount &&
+          !addressesEqual(keyboard.owner, connectedAccount)
+        ) {
+          toast("Somebody created a new keyboard!", {
+            id: JSON.stringify(keyboard),
+          });
+        }
+        await getKeyboards();
+      });
+
+      keyboardsContract.on("TipSent", (recipient, amount) => {
+        if (addressesEqual(recipient, connectedAccount)) {
+          toast(
+            `You received a tip of ${ethers.utils.formatEther(amount)} eth!`,
+            { id: recipient + amount }
+          );
+        }
+      });
+    }
+  };
+
+  useEffect(addContractEventHandlers, [!!keyboardsContract, connectedAccount]);
 
   if (!ethereum) {
     return <p>Please install MetaMask to connect to this site</p>;
