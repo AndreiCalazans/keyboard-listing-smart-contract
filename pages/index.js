@@ -1,12 +1,11 @@
 import { useState, useEffect } from "react";
-import { ethers } from "ethers";
 import { UserCircleIcon } from "@heroicons/react/solid";
 
 import PrimaryButton from "../components/primary-button";
 import Keyboard from "../components/keyboard";
-import abi from "../utils/Keyboards.json";
 import { addressesEqual } from "../utils/addressesEqual";
 import TipButton from "../components/tip-button";
+import getKeyboardsContract from "../utils/getKeyboardsContract"
 
 export default function Home() {
   const [ethereum, setEthereum] = useState(undefined);
@@ -15,8 +14,7 @@ export default function Home() {
   const [newKeyboard, setNewKeyboard] = useState("");
   const [keyboardsLoading, setKeyboardsLoading] = useState(false);
 
-  const contractAddress = "0xb61E3c94240a0De556e4C45CE494044cc32cC9c9";
-  const contractABI = abi.abi;
+  const keyboardsContract = getKeyboardsContract(ethereum);
 
   const handleAccounts = (accounts) => {
     if (accounts.length > 0) {
@@ -55,14 +53,6 @@ export default function Home() {
     if (ethereum && connectedAccount) {
       try {
         setKeyboardsLoading(true);
-        const provider = new ethers.providers.Web3Provider(ethereum);
-        const signer = provider.getSigner();
-        const keyboardsContract = new ethers.Contract(
-          contractAddress,
-          contractABI,
-          signer
-        );
-
         const keyboards = await keyboardsContract.getKeyboards();
         console.log("Retrieved keyboards...", keyboards);
         setKeyboards(keyboards);
@@ -71,7 +61,7 @@ export default function Home() {
       }
     }
   };
-  useEffect(() => getKeyboards(), [connectedAccount]);
+  useEffect(() => getKeyboards(), [connectedAccount, !!keyboardsContract]);
 
   const submitCreate = async (e) => {
     e.preventDefault();
@@ -80,14 +70,6 @@ export default function Home() {
       console.error("Ethereum object is required to create a keyboard");
       return;
     }
-
-    const provider = new ethers.providers.Web3Provider(ethereum);
-    const signer = provider.getSigner();
-    const keyboardsContract = new ethers.Contract(
-      contractAddress,
-      contractABI,
-      signer
-    );
 
     const createTxn = await keyboardsContract.create(newKeyboard);
     console.log("Create transaction started...", createTxn.hash);
